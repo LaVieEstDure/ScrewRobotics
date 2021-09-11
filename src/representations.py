@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.core.records import array 
 
-class w:
+class Rotation:
     def __init__(self, x, y, z):
         self.euler_vec = np.array([x, y, z])
 
@@ -21,7 +21,7 @@ class w:
 
 class Transformation:
     def __init__(self, w1, w2, w3, x, y, z):
-        self.w = w(w1, w2, w3)
+        self.w = Rotation(w1, w2, w3)
         self.v = np.array([x, y, z])
 
     @classmethod
