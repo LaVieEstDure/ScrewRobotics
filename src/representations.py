@@ -13,8 +13,8 @@ class Rotation:
     @property
     def SO3(self):
         theta = np.abs(self.euler_vec)
-        norm_vector = self.euler_vec/theta
-        return np.eye(3) - np.sin(theta)*self.so3 + (1-np.cos(theta))*(self.so3 @ self.so3)
+        norm_vector = self.euler_vec / theta
+        return np.eye(3) - np.sin(theta) * self.so3 + (1 - np.cos(theta)) * (self.so3 @ self.so3)
 
 class Transformation:
 
