@@ -3,31 +3,37 @@ from numpy.core.records import array
 
 class Rotation:
     def __init__(self, x, y, z):
-        self.euler_vec = np.array([x, y, z])
+        euler_vector = np.array([x, y, z])
+        self.theta = np.abs(euler_vector)
+        self.w_hat = euler_vector/self.theta if self.theta == 0 else np.zeros(1, 3)
 
     @classmethod
-    def identity():
-        self.euler_vec = np.array([0, 0, 0])
+    def identity(cls):
+        return cls(0, 0, 0)
+
+    @property
+    def so3_norm(self):
+        return self.theta*np.array([[0, -self.w_hat[2], self.w_hat[1]], 
+                                    [self.w_hat[2], 0, -self.w_hat[0]], 
+                                    [-self.w_hat[1], self.w_hat[0], 0]])
 
     @property
     def so3(self):
-        return np.array([[0, -self.euler_vec[2], self.euler_vec[1]], 
-                        [self.euler_vec[2], 0, -self.euler_vec[0]], 
-                        [-self.euler_vec[1], self.euler_vec[0], 0]])
+        return self.theta*self.so3
+
     @property
     def SO3(self):
-        theta = np.abs(self.euler_vec)
-        return np.eye(3) - np.sin(theta)*self.so3/theta + (1-np.cos(theta))*(self.so3/theta @ self.so3/theta)
+        return np.eye(3) - np.sin(self.theta)*self.so3 + (1-np.cos(self.theta))*(self.so3 @ self.so3)
+
 
 class Transformation:
-    def __init__(self, w1, w2, w3, x, y, z):
-        self.w = Rotation(w1, w2, w3)
+    def __init__(self, w, x, y, z):
+        self.w = w
         self.v = np.array([x, y, z])
 
     @classmethod
-    def from_w_xyz(w, x, y, z):
-        self.w = w 
-        self.v = np.array([x, y, z]).T
+    def from_screw(cls, w1, w2, w3, x, y, z):
+        return cls(Rotation(w1, w2, w3), x, y, z)
 
     @property
     def se3(self):
@@ -35,4 +41,4 @@ class Transformation:
     
     @property
     def SE3(self):
-        pass
+        return np.vstack(np.hstack(self.w.SO3, np.eye(3)*)
