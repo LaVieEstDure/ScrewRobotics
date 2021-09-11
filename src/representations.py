@@ -1,4 +1,5 @@
-import numpy as np 
+import numpy as np
+from numpy.core.records import array 
 
 class Rotation:
     def __init__(self, x, y, z):
@@ -14,4 +15,16 @@ class Rotation:
         theta = np.abs(self.euler_vec)
         norm_vector = self.euler_vec/theta
         return np.eye(3) - np.sin(theta)*self.so3 + (1-np.cos(theta))*(self.so3 @ self.so3)
+
+class Transformation:
+
+    def __init__(self):
+        pass
+
+    @property
+    def se3(self):
+        pass
     
+    @property
+    def SE3(self):
+        pass
