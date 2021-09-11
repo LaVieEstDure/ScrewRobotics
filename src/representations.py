@@ -36,8 +36,8 @@ class Rotation:
         if False:
             cls(0,0,0)
         else:
-            theta = acos(1/2*(np.trace(R) - 1))
-            w_hat_so3 = 1/(2*sin(theta))*(R-R.T)
+            theta = np.arccos(1/2 * (np.trace(R) - 1))
+            w_hat_so3 = 1/(2*sin(theta)) * (R - R.T)
             w_hat = np.array([w_hat_so3[2,1], w_hat_so3[0, 2], w_hat_so3[1, 0]])
             return cls(*(w_hat*theta))
 
@@ -132,6 +132,7 @@ class Transformation:
         T[np.abs(T) < tol] = 0.0
         return T
 
+    # TODO: Hard as hell
     @classmethod
     def from_SE3(cls, H):
         """
@@ -144,25 +145,28 @@ class Transformation:
             mag = np.linalg.norm(p)
             return cls(0, 0, 0, p[0]/mag, p[1]/mag, p[2]/mag)
         else:
-            rot = Rotation.from_SO3(R)
-            w = rot.w_hat
-            theta = rot.theta
-            Ginv = 1/theta * np.eye(3) - 1/2*rot.so3_norm + (1/theta - 1/2*(1/sin(theta/2))) * (rot.so3_norm @ rot.so3_norm)
-            v = (Ginv @ p)
-            return cls(*w, *v)
+            # rot = Rotation.from_SO3(R)
+            # w = rot.so3
+            # theta = rot.theta
+            # Ginv = 1/theta * np.eye(3) - 1/2*rot.so3 + (1/theta - 1/2*(1/sin(theta/2))) * (rot.so3 @ rot.so3)
+            # v = (Ginv @ p)
+            # return cls(*w, *v)
+
+            # return Transformation(H[2][1], H[0][2], H[1][0], H[0][3], H[1][3], H[2][3])
 
 if __name__ == "__main__":
-    x = Rotation(4,5,6)
-    print(x.theta)
-    xso3 = x.SO3
-    newx = Rotation.from_SO3(xso3)
-    print(newx.theta)
+    # x = Rotation(2, 0, 0)
+    # print(x.theta)
+    # xso3 = x.SO3
+    # print(xso3)
+    # newx = Rotation.from_SO3(xso3)
+    # print(newx.theta)
     
-    # x = Transformation(1,2,3,4,5,6)
-    # # print(x.w_hat)
-    # print(x.v_hat)
-    # xse3 = x.SE3
-    # newx = Transformation.from_SE3(xse3)
-    # # print(newx.w_hat)
-    # print(newx.v_hat)
+    x = Transformation(1,2,3,4,5,6)
+    # print(x.w_hat)
+    print(x.v_hat)
+    xse3 = x.SE3
+    newx = Transformation.from_SE3(xse3)
+    # print(newx.w_hat)
+    print(newx.v_hat)
     
