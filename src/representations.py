@@ -5,19 +5,17 @@ class Rotation:
     def __init__(self, x, y, z):
         euler_vector = np.array([x, y, z])
         self.theta = np.abs(euler_vector)
-        self.w_hat = euler_vector/self.theta
+        self.w_hat = euler_vector/self.theta if self.theta == 0 else np.zeros(1, 3)
 
     @classmethod
-    def identity():
-        self.theta = 0
-        self.w_hat = np.array([0, 0, 0])
+    def identity(cls):
+        return cls(0, 0, 0)
 
     @property
     def so3_norm(self):
         return self.theta*np.array([[0, -self.w_hat[2], self.w_hat[1]], 
                                     [self.w_hat[2], 0, -self.w_hat[0]], 
                                     [-self.w_hat[1], self.w_hat[0], 0]])
-
 
     @property
     def so3(self):
