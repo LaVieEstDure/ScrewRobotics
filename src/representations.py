@@ -45,9 +45,9 @@ class Rotation:
     @lru_cache(maxsize=1)
     def so3_norm(self):
         """Returns the transformation in so3 (element of Lie Algebra), when theta = 1"""
-        return np.array([[             0, -self.w_hat[2],  self.w_hat[1]], 
-                         [ self.w_hat[2],              0, -self.w_hat[0]], 
-                         [-self.w_hat[1],  self.w_hat[0],              0]])
+        return np.array([[             0, -self.w_hat[2,0],  self.w_hat[1,0]], 
+                         [ self.w_hat[2,0],              0, -self.w_hat[0,0]], 
+                         [-self.w_hat[1,0],  self.w_hat[0,0],              0]])
 
     @property
     @lru_cache(maxsize=1)
@@ -126,8 +126,8 @@ class Transformation:
     def SE3(self):
         R = np.eye(3) + sin(self.theta) * self.rotation.so3_norm + \
             (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)
-        p = (np.eye(3) * self.theta + (sin(self.theta) * self.rotation.so3_norm + \
-            (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm))) @ self.v_hat
+        p = (np.eye(3) * self.theta + (1 - cos(self.theta)) * self.rotation.so3_norm + \
+            (self.theta - sin(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)) @ self.v_hat
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
         T[np.abs(T) < tol] = 0.0
         return T
