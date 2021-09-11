@@ -57,6 +57,17 @@ class Rotation:
         """ Returns the identity of this group """
         return cls(0, 0, 0)
 
+    @classmethod
+    def from_SO3(cls, R):
+        # if np.allclose(R, np.eye(3)):
+        if False:
+            cls(0,0,0)
+        else:
+            theta = np.arccos(1/2 * (np.trace(R) - 1))
+            w_hat_so3 = 1/(2*sin(theta)) * (R - R.T)
+            w_hat = np.array([w_hat_so3[2,1], w_hat_so3[0, 2], w_hat_so3[1, 0]])
+            return cls(*(w_hat*theta))
+
     @property
     @lru_cache(maxsize=1)
     def so3_norm(self):
@@ -78,6 +89,8 @@ class Rotation:
         R = np.eye(3) + sin(self.theta) * self.so3_norm + (1 - cos(self.theta)) * (self.so3_norm @ self.so3_norm)
         R[np.abs(R) < tol] = 0.0
         return R
+
+
 
 class Transformation:
     def __init__(self, wx, wy, wz, vx, vy, vz):
@@ -151,3 +164,45 @@ class Transformation:
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
         T[np.abs(T) < tol] = 0.0
         return T
+<<<<<<< HEAD
+=======
+
+    # TODO: Hard as hell
+    @classmethod
+    def from_SE3(cls, H):
+        """
+        Finds SE(3) representation from homogeneous transformation matrix
+        """
+        R = H[:3, :3]
+        p = H[:3, 3]
+        # if np.allclose(R, np.eye(3)):
+        if False:
+            mag = np.linalg.norm(p)
+            return cls(0, 0, 0, p[0]/mag, p[1]/mag, p[2]/mag)
+        else:
+            # rot = Rotation.from_SO3(R)
+            # w = rot.so3
+            # theta = rot.theta
+            # Ginv = 1/theta * np.eye(3) - 1/2*rot.so3 + (1/theta - 1/2*(1/sin(theta/2))) * (rot.so3 @ rot.so3)
+            # v = (Ginv @ p)
+            # return cls(*w, *v)
+
+            # return Transformation(H[2][1], H[0][2], H[1][0], H[0][3], H[1][3], H[2][3])
+
+if __name__ == "__main__":
+    # x = Rotation(2, 0, 0)
+    # print(x.theta)
+    # xso3 = x.SO3
+    # print(xso3)
+    # newx = Rotation.from_SO3(xso3)
+    # print(newx.theta)
+    
+    x = Transformation(1,2,3,4,5,6)
+    # print(x.w_hat)
+    print(x.v_hat)
+    xse3 = x.SE3
+    newx = Transformation.from_SE3(xse3)
+    # print(newx.w_hat)
+    print(newx.v_hat)
+    
+>>>>>>> ca82e905a270f0f5f25f09670e4b89404e53e400
