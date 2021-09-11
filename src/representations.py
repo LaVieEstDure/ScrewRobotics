@@ -26,6 +26,33 @@ class Rotation:
         self.w_hat = w / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
 
     @classmethod
+    def SO3_to_so3(cls, arr):
+        acosinput = (np.trace(R) - 1) / 2.0
+        if acosinput >= 1:
+            return np.zeros((3, 3))
+        elif acosinput <= -1:
+            if not NearZero(1 + R[2][2]):
+                omg = (1.0 / np.sqrt(2 * (1 + R[2][2]))) \
+                    * np.array([R[0][2], R[1][2], 1 + R[2][2]])
+            elif not NearZero(1 + R[1][1]):
+                omg = (1.0 / np.sqrt(2 * (1 + R[1][1]))) \
+                    * np.array([R[0][1], 1 + R[1][1], R[2][1]])
+            else:
+                omg = (1.0 / np.sqrt(2 * (1 + R[0][0]))) \
+                    * np.array([1 + R[0][0], R[1][0], R[2][0]])
+            return VecToso3(np.pi * omg)
+        else:
+            theta = np.arccos(acosinput)
+            return theta / 2.0 / np.sin(theta) * (R - np.array(R).T)
+
+    @classmethod
+    def from_numpy(cls, arr):
+        assert arr.shape == (3, 3)
+        
+        return cls(0, 0, 0)
+
+
+    @classmethod
     def identity(cls):
         """ Returns the identity of this group """
         return cls(0, 0, 0)
@@ -81,6 +108,12 @@ class Transformation:
         self.v_hat = v / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
         self.rotation = Rotation(wx, wy, wz)
 
+    @classmethod
+    def from_numpy(cls, arr):
+        assert arr.shape == (4, 4)
+        
+        return cls(0, 0, 0, 0, 0, 0)
+
     def __mul__(self, b):
         if isinstance(b, (int, float, complex)) and not isinstance(b, bool):
             new = deepcopy(self)
@@ -118,4 +151,3 @@ class Transformation:
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
         T[np.abs(T) < tol] = 0.0
         return T
-
