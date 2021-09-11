@@ -2,6 +2,7 @@ import numpy as np
 from numpy.core.records import array 
 from math import *
 from functools import lru_cache
+from copy import deepcopy
 tol = 1e-9
 
 class Rotation:
@@ -57,6 +58,14 @@ class Transformation:
 
         self.rotation = Rotation(wx, wy, wz)
 
+    def __mul__(self, b):
+        if isinstance(b, (int, float, complex)) and not isinstance(b, bool):
+            new = deepcopy(self)
+            new.theta *= b
+            return new
+    
+    __rmul__ = __mul__
+
     @property
     @lru_cache(maxsize=1)
     def se3_norm(self):
@@ -74,8 +83,11 @@ class Transformation:
     @property
     @lru_cache(maxsize=1)
     def SE3(self):
-        R = np.eye(3) + sin(self.theta) * self.rotation.so3_norm + (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)
-        p = (np.eye(3) * self.theta + (sin(self.theta) * self.rotation.so3_norm + (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm))) @ self.v_hat
+        R = np.eye(3) + sin(self.theta) * self.rotation.so3_norm + \
+            (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)
+        p = (np.eye(3) * self.theta + (sin(self.theta) * self.rotation.so3_norm + \
+            (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm))) @ self.v_hat
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
         T[np.abs(T) < tol] = 0.0
         return T
+
