@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.core.records import array 
 
-class w:
+class Rotation:
     def __init__(self, x, y, z):
         self.euler_vec = np.array([x, y, z])
 
@@ -17,17 +17,16 @@ class w:
     @property
     def SO3(self):
         theta = np.abs(self.euler_vec)
-        return np.eye(3) - np.sin(theta)*self.so3/mag + (1-np.cos(theta))*(self.so3/mag @ self.so3/mag)
+        return np.eye(3) - np.sin(theta)*self.so3/theta + (1-np.cos(theta))*(self.so3/theta @ self.so3/theta)
 
 class Transformation:
-    def __init__(self, w1, w2, w3, x, y, z):
-        self.w = w(w1, w2, w3)
+    def __init__(self, w, x, y, z):
+        self.w = w
         self.v = np.array([x, y, z])
 
     @classmethod
-    def from_w_xyz(w, x, y, z):
-        self.w = w 
-        self.v = np.array([x, y, z]).T
+    def from_screw(cls, w1, w2, w3, x, y, z):
+        return cls(Rotation(w1, w2, w3), x, y, z)
 
     @property
     def se3(self):
@@ -35,4 +34,4 @@ class Transformation:
     
     @property
     def SE3(self):
-        pass
+        return np.vstack()
