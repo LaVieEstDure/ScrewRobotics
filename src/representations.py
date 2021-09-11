@@ -3,21 +3,30 @@ from numpy.core.records import array
 
 class Rotation:
     def __init__(self, x, y, z):
-        self.euler_vec = np.array([x, y, z])
+        euler_vector = np.array([x, y, z])
+        self.theta = np.abs(euler_vector)
+        self.w_hat = euler_vector/self.theta
 
     @classmethod
     def identity():
-        self.euler_vec = np.array([0, 0, 0])
+        self.theta = 0
+        self.w_hat = np.array([0, 0, 0])
+
+    @property
+    def so3_norm(self):
+        return self.theta*np.array([[0, -self.w_hat[2], self.w_hat[1]], 
+                                    [self.w_hat[2], 0, -self.w_hat[0]], 
+                                    [-self.w_hat[1], self.w_hat[0], 0]])
+
 
     @property
     def so3(self):
-        return np.array([[0, -self.euler_vec[2], self.euler_vec[1]], 
-                        [self.euler_vec[2], 0, -self.euler_vec[0]], 
-                        [-self.euler_vec[1], self.euler_vec[0], 0]])
+        return self.theta*self.so3
+
     @property
     def SO3(self):
-        theta = np.abs(self.euler_vec)
-        return np.eye(3) - np.sin(theta)*self.so3/theta + (1-np.cos(theta))*(self.so3/theta @ self.so3/theta)
+        return np.eye(3) - np.sin(self.theta)*self.so3 + (1-np.cos(self.theta))*(self.so3 @ self.so3)
+
 
 class Transformation:
     def __init__(self, w, x, y, z):
@@ -34,4 +43,5 @@ class Transformation:
     
     @property
     def SE3(self):
-        return np.vstack()
+        
+        return np.vstack(np.hstack(self.w.SO3, np.eye(3)*)
