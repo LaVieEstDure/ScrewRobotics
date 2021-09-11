@@ -2,13 +2,9 @@ import numpy as np
 from numpy.core.records import array 
 from math import *
 from functools import lru_cache
-<<<<<<< HEAD
 from copy import deepcopy
-tol = 1e-9
-=======
 # Tolerance
 tol = 1e-10
->>>>>>> 814ba73a4aaf8a0cc012e6d779457e402a8fef30
 
 class Rotation:
     def __init__(self, wx, wy, wz):
