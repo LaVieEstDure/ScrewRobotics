@@ -175,17 +175,5 @@ class Transformation:
             return tf
 
 if __name__ == "__main__":
-
-    x = Transformation(0, 0, pi/2, 10*pi, 0, 0)
-    xSE3 = x.SE3
-    newx = Transformation.from_SE3(xSE3)
-    print(x.SE3)
-    print(newx.SE3)
-    # x = Rotation(2, 0, 0)
-    # print(x.theta)
-    # xso3 = x.SO3
-    # print(xso3)
-    # newx = Rotation.from_SO3(xso3)
-    # print(newx.theta)
-    
+    pass
     

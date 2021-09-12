@@ -3,41 +3,70 @@ from functools import reduce
 from operator import matmul
 from representations import Transformation
 import numpy as np
+from math import *
 
 class Frame(Enum):
     SPACE_FRAME = 0
     BODY_FRAME = 1
 
 class Robot:
-    def __init__(self, M, screw_list, frame):
-        self.M = M
+    def __init__(self, M_list, screw_list, frame):
+        assert len(M_list) == len(screw_list) + 2
+        self.n = len(screw_list)
+        self.M_list = M_list
         self.screw_list = [*map(lambda x: Transformation(*x), screw_list)]
         self.frame = frame
 
     def forward_kinematics(self, theta_list):
-        non_norm = [theta*self.screw_list[i] for i, theta in enumerate(theta_list)]
-        se3mats = map(lambda x: x.SE3, non_norm)
-        transformation = reduce(matmul, se3mats)
-        if self.frame == Frame.SPACE_FRAME:
-            return transformation @ self.M
-        elif self == Frame.BODY_FRAME:
-            return self.M @ transformation
-        else:
-            raise ValueError("Wrong frame specified!")
+        non_norm = [theta * self.screw_list[i] for (i, theta) in enumerate(theta_list)]
+        T = [None] * (self.n + 2)
+        T[0] = np.eye(4)
+        for i in range(1, self.n + 2):
+            index = i if i != self.n + 1 else i - 1
+            SE3_mats = map(lambda x: x.SE3, non_norm[:index])
+            transformation = reduce(matmul, SE3_mats)
+            if self.frame == Frame.SPACE_FRAME:
+                T[i] = transformation @ self.M_list[i]
+            elif self.frame == Frame.BODY_FRAME:
+                T[i] = self.M_list[i] @ transformation
+            else:
+                raise ValueError("Wrong frame specified!")
+        return T
+                
 
 if __name__ == "__main__":
-    M = np.array([[-1, 0,  0, 0],
-                 [ 0, 1,  0, 6],
-                 [ 0, 0, -1, 2],
+    M0 = np.array([[1, 0,  0, 0],
+                 [ 0, 1,  0, 0],
+                 [ 0, 0, 1, 0],
                  [ 0, 0,  0, 1]])
 
-    screw_vecs = np.array([[0, 0,  1,  4, 0,    0],
-                           [0, 0,  0,  0, 1,    0],
-                           [0, 0, -1, -6, 0, -0.1]])
+    M1 = np.array([[1, 0,  0, 0.5],
+                 [ 0, 1,  0, 0],
+                 [ 0, 0, 1, 0],
+                 [ 0, 0,  0, 1]])
+    M2 = np.array([[1, 0,  0, 1.5],
+                 [ 0, 1,  0, 0],
+                 [ 0, 0, 1, 0],
+                 [ 0, 0,  0, 1]])
+    M3 = np.array([[1, 0,  0, 2.5],
+                 [ 0, 1,  0, 0],
+                 [ 0, 0, 1, 0],
+                 [ 0, 0,  0, 1]])
 
-    joint_states = np.array([np.pi / 2.0, 3, np.pi])
+    M4 = np.array([[1, 0,  0, 3.0],
+                 [ 0, 1,  0, 0],
+                 [ 0, 0, 1, 0],
+                 [ 0, 0,  0, 1]])
 
-    r = Robot(M, screw_vecs, Frame.SPACE_FRAME)
+    M_list = [M0, M1, M2, M3, M4]
+    
+    S1 = np.array([0, 0, 1.0,  0, 0.0, 0])
+    S2 = np.array([0, 0, 1.0,  0, -1.0, 0])
+    S3 = np.array([0, 0, 1.0,  0, -2.0, 0])
 
-    end_effector_loc = r.forward_kinematics(joint_states)
+    screw_list = [S1, S2, S3]
+    theta_list = [0, pi / 2, pi / 2]
 
+    r = Robot(M_list, screw_list, Frame.SPACE_FRAME)
+
+    T = r.forward_kinematics(theta_list)
