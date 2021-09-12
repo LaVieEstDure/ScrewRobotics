@@ -3,6 +3,9 @@ from numpy.core.records import array
 from math import *
 from functools import lru_cache
 from copy import deepcopy
+
+import modern_robotics as mr
+
 # Tolerance
 tol = 1e-10
 
@@ -26,26 +29,6 @@ class Rotation:
         self.w_hat = w / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
 
     @classmethod
-    def SO3_to_so3(cls, arr):
-        acosinput = (np.trace(R) - 1) / 2.0
-        if acosinput >= 1:
-            return np.zeros((3, 3))
-        elif acosinput <= -1:
-            if not NearZero(1 + R[2][2]):
-                omg = (1.0 / np.sqrt(2 * (1 + R[2][2]))) \
-                    * np.array([R[0][2], R[1][2], 1 + R[2][2]])
-            elif not NearZero(1 + R[1][1]):
-                omg = (1.0 / np.sqrt(2 * (1 + R[1][1]))) \
-                    * np.array([R[0][1], 1 + R[1][1], R[2][1]])
-            else:
-                omg = (1.0 / np.sqrt(2 * (1 + R[0][0]))) \
-                    * np.array([1 + R[0][0], R[1][0], R[2][0]])
-            return VecToso3(np.pi * omg)
-        else:
-            theta = np.arccos(acosinput)
-            return theta / 2.0 / np.sin(theta) * (R - np.array(R).T)
-
-    @classmethod
     def from_numpy(cls, arr):
         assert arr.shape == (3, 3)
         
@@ -59,12 +42,18 @@ class Rotation:
 
     @classmethod
     def from_SO3(cls, R):
-        # if np.allclose(R, np.eye(3)):
+        if abs(np.linalg.norm(R - np.ones(3))) < tol:
+            return cls(0, 0, 0)
+        if abs(np.trace(R) + 1.0) < tol:
+            wx = (pi / sqrt(2 * (1 + R[2][2]))) * R[0,2]
+            wy = (pi / sqrt(2 * (1 + R[2][2]))) * R[1,2]
+            wz = (pi / sqrt(2 * (1 + R[2][2]))) * (1.0 + R[2,2])
+            return cls(wx, wy, wz)
         if False:
             cls(0,0,0)
         else:
-            theta = np.arccos(1/2 * (np.trace(R) - 1))
-            w_hat_so3 = 1/(2*sin(theta)) * (R - R.T)
+            theta = acos((np.trace(R) - 1.0) / 2.0)
+            w_hat_so3 = (R - R.T) / (2 * sin(theta))
             w_hat = np.array([w_hat_so3[2,1], w_hat_so3[0, 2], w_hat_so3[1, 0]])
             return cls(*(w_hat*theta))
 
@@ -124,7 +113,6 @@ class Transformation:
     @classmethod
     def from_numpy(cls, arr):
         assert arr.shape == (4, 4)
-        
         return cls(0, 0, 0, 0, 0, 0)
 
     def __mul__(self, b):
@@ -164,32 +152,35 @@ class Transformation:
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
         T[np.abs(T) < tol] = 0.0
         return T
-<<<<<<< HEAD
-=======
 
     # TODO: Hard as hell
     @classmethod
-    def from_SE3(cls, H):
+    def from_SE3(cls, T):
         """
         Finds SE(3) representation from homogeneous transformation matrix
         """
-        R = H[:3, :3]
-        p = H[:3, 3]
-        # if np.allclose(R, np.eye(3)):
-        if False:
-            mag = np.linalg.norm(p)
-            return cls(0, 0, 0, p[0]/mag, p[1]/mag, p[2]/mag)
+        R = T[:3, :3]
+        p = np.array([T[:3, 3]]).T
+        rotation = Rotation.from_SO3(R)
+        w_hat = rotation.w_hat
+        if np.linalg.norm(w_hat) < tol:
+            return Transformation(0, 0, 0, p[0, 0], p[1, 0], p[2, 0])
         else:
-            # rot = Rotation.from_SO3(R)
-            # w = rot.so3
-            # theta = rot.theta
-            # Ginv = 1/theta * np.eye(3) - 1/2*rot.so3 + (1/theta - 1/2*(1/sin(theta/2))) * (rot.so3 @ rot.so3)
-            # v = (Ginv @ p)
-            # return cls(*w, *v)
-
-            # return Transformation(H[2][1], H[0][2], H[1][0], H[0][3], H[1][3], H[2][3])
+            theta = rotation.theta
+            w = w_hat * theta
+            w_mat = rotation.so3_norm
+            v_hat = (np.eye(3) / theta - w_mat / 2.0 + (1.0 / theta - (1.0 / np.tan(theta / 2.0)) / 2.0) * (w_mat @ w_mat)) @ p
+            v = v_hat * theta
+            tf = Transformation(w[0, 0], w[1, 0], w[2, 0], v[0, 0], v[1, 0], v[2, 0])
+            return tf
 
 if __name__ == "__main__":
+
+    x = Transformation(0, 0, pi/2, 10*pi, 0, 0)
+    xSE3 = x.SE3
+    newx = Transformation.from_SE3(xSE3)
+    print(x.SE3)
+    print(newx.SE3)
     # x = Rotation(2, 0, 0)
     # print(x.theta)
     # xso3 = x.SO3
@@ -197,12 +188,4 @@ if __name__ == "__main__":
     # newx = Rotation.from_SO3(xso3)
     # print(newx.theta)
     
-    x = Transformation(1,2,3,4,5,6)
-    # print(x.w_hat)
-    print(x.v_hat)
-    xse3 = x.SE3
-    newx = Transformation.from_SE3(xse3)
-    # print(newx.w_hat)
-    print(newx.v_hat)
     
->>>>>>> ca82e905a270f0f5f25f09670e4b89404e53e400
