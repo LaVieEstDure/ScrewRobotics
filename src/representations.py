@@ -4,6 +4,8 @@ from math import *
 from functools import lru_cache
 from copy import deepcopy
 
+import matplotlib.pyplot as plt
+
 import modern_robotics as mr
 
 # Tolerance
@@ -39,6 +41,25 @@ class Rotation:
     def identity(cls):
         """ Returns the identity of this group """
         return cls(0, 0, 0)
+
+    @property
+    @lru_cache(maxsize=1)
+    def ad(self):
+        """
+        Returns the lie bracket (skew matrix)
+        """
+        w = self.w_hat * self.theta
+        Ad_w = Rotation(w[0, 0], w[1, 0], w[2, 0]).so3
+        return Ad_w
+
+    @property
+    @lru_cache(maxsize=1)
+    def Ad(self):
+        """
+        Returns the adjoint map associated with SO3
+        """
+        Ad_R = self.SO3
+        return Ad_R
 
     @classmethod
     def from_SO3(cls, R):
@@ -153,7 +174,34 @@ class Transformation:
         T[np.abs(T) < tol] = 0.0
         return T
 
-    # TODO: Hard as hell
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def ad(self):
+        """
+        Returns the lie bracket
+        """
+        w = self.w_hat * self.theta
+        v = self.v_hat * self.theta
+        w_bracket = Rotation(w[0, 0], w[1, 0], w[2, 0]).so3
+        v_bracket = Rotation(v[0, 0], v[1, 0], v[2, 0]).so3
+        ad_V = np.vstack((np.hstack((w_bracket, np.zeros((3, 3)))), np.hstack((v_bracket, w_bracket))))
+        return ad_V
+
+    @property
+    @lru_cache(maxsize=1)
+    def Ad(self):
+        """
+        Returns the adjoint map associated with SE3
+        """
+        T = self.SE3
+        R = T[:3, :3]
+        p = np.array([T[:3, 3]]).T
+        p_rot = Rotation(p[0, 0], p[1, 0], p[2, 0])
+        Ad_T = np.vstack((np.hstack((R, np.zeros((3, 3)))), np.hstack((p_rot.so3 @ R, R))))
+        return Ad_T
+
     @classmethod
     def from_SE3(cls, T):
         """
@@ -164,16 +212,68 @@ class Transformation:
         rotation = Rotation.from_SO3(R)
         w_hat = rotation.w_hat
         if np.linalg.norm(w_hat) < tol:
-            return Transformation(0, 0, 0, p[0, 0], p[1, 0], p[2, 0])
+            return cls(0, 0, 0, p[0, 0], p[1, 0], p[2, 0])
         else:
             theta = rotation.theta
             w = w_hat * theta
             w_mat = rotation.so3_norm
             v_hat = (np.eye(3) / theta - w_mat / 2.0 + (1.0 / theta - (1.0 / np.tan(theta / 2.0)) / 2.0) * (w_mat @ w_mat)) @ p
             v = v_hat * theta
-            tf = Transformation(w[0, 0], w[1, 0], w[2, 0], v[0, 0], v[1, 0], v[2, 0])
+            tf = cls(w[0, 0], w[1, 0], w[2, 0], v[0, 0], v[1, 0], v[2, 0])
             return tf
 
-if __name__ == "__main__":
-    pass
+def axisEqual3D(ax):
+    extents = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
+    sz = extents[:,1] - extents[:,0]
+    centers = np.mean(extents, axis=1)
+    maxsize = max(abs(sz))
+    r = maxsize/2
+    for ctr, dim in zip(centers, 'xyz'):
+        getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
+
+def screw_demo():
+    ax = plt.axes(projection='3d')
+    tf = Transformation(0, 3/sqrt(5), 4/sqrt(5), 0.0, -1.0, 2.0)
+    x = []
+    y = []
+    z = []
+    ix_vec = []
+    jx_vec = []
+    kx_vec = []
+    iy_vec = []
+    jy_vec = []
+    ky_vec = []
+    iz_vec = []
+    jz_vec = []
+    kz_vec = []
+    for i in range(100):
+        T = ((2 * pi * i / 50.0) * tf).SE3 @ Transformation(0, 0, 0, 2, 0, 0).SE3
+        x.append(T[0, 3])
+        y.append(T[1, 3])
+        z.append(T[2, 3])
+        ix_vec.append(T[0, 0])
+        iy_vec.append(T[1, 0])
+        iz_vec.append(T[2, 0])
+        jx_vec.append(T[0, 1])
+        jy_vec.append(T[1, 1])
+        jz_vec.append(T[2, 1])
+        kx_vec.append(T[0, 2])
+        ky_vec.append(T[1, 2])
+        kz_vec.append(T[2, 2])
+    ax.scatter3D(x, y, z, color='k')
+    ax.quiver3D(x, y, z, ix_vec, iy_vec, iz_vec, color='r', length=0.3, arrow_length_ratio=0.1)
+    ax.quiver3D(x, y, z, jx_vec, jy_vec, jz_vec, color='g', length=0.3, arrow_length_ratio=0.1)
+    ax.quiver3D(x, y, z, kx_vec, ky_vec, kz_vec, color='b', length=0.3, arrow_length_ratio=0.1)
+    ax.set_xlim([-5, 5])
+    ax.set_ylim([-5, 5])
+    ax.set_zlim([0, 10])
+    axisEqual3D(ax)
+    plt.show()
     
+
+if __name__ == "__main__":
+
+    V = Transformation(0, 0, 1, 0, -1, 0)
+    V_mr = np.array([0, 0, 1, 0, -1, 0])
+    print(V.ad)
+    print(mr.ad(V_mr))
