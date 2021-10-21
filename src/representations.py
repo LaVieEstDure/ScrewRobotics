@@ -6,8 +6,6 @@ from copy import deepcopy
 
 import matplotlib.pyplot as plt
 
-import modern_robotics as mr
-
 # Tolerance
 tol = 1e-10
 
@@ -167,7 +165,6 @@ class Transformation:
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
         T[np.abs(T) < tol] = 0.0
         return T
-
 
 
     @property
