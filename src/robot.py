@@ -1,3 +1,4 @@
+from copy import error
 from enum import Enum
 from functools import reduce
 from operator import matmul
@@ -12,15 +13,17 @@ class Frame(Enum):
 
 
 class Robot:
-    def __init__(self, M_list, screw_list, frame, ik=None):
+    def __init__(self, M_list, screw_list, frame, ik=None, num_ik_iterations=20):
         assert len(M_list) == len(screw_list) + 2
         self.n = len(screw_list)
         self.M_list = M_list
         self.screw_list = [*map(lambda x: Transformation(*x), screw_list)]
+        self.num_joints = len(self.screw_list)
         self.frame = frame
         self.ik = ik
+        self.num_iterations = num_ik_iterations
 
-    def forward_kinematics(self, theta_list):
+    def forward_kinematics_all_joints(self, theta_list):
         non_norm = [theta * self.screw_list[i]
                     for (i, theta) in enumerate(theta_list)]
         T = [None] * (self.n + 2)
@@ -37,9 +40,25 @@ class Robot:
                 raise ValueError("Wrong frame specified!")
         return T
 
+    def forward_kinematics(self, theta_list):
+        return self.forward_kinematics_all_joints(theta_list)[-1]
+
     def inverse_kinematics(self, pose):
+        tol = e-8
         if self.ik:
             return self.ik(pose)
+        else:
+            joint_values = np.random.rand(self.num_joints)
+            end_effector_frame = self.forward_kinematics(joint_values)
+            Tsbinv_Tsd = Transformation.from_SE3((-Transformation.from_SE3(pose)).SE3 @ end_effector_frame)
+            Vs = Transformation.from_SE3(end_effector_frame).Ad @ Tsbinv_Tsd.s
+            error_w = np.linalg.norm([Vs[0,0], Vs[1,0], Vs[2,0]]) 
+            error_v = np.linalg.norm([Vs[3,0], Vs[4,0], Vs[5,0]])
+            for i in range(self.num_iterations):
+                if error_w < tol and error_v < tol:
+                    return joint_values
+                break
+            
 
 
 if __name__ == "__main__":
@@ -76,4 +95,6 @@ if __name__ == "__main__":
     theta_list = [0, pi / 2, pi / 2]
 
     r = Robot(M_list, screw_list, Frame.SPACE_FRAME)
-    print(r.forward_kinematics([0.1, 0.2, 0.3]))
+    fk = r.forward_kinematics([0.1, 0.2, 0.3])
+    r.inverse_kinematics(fk)
+
