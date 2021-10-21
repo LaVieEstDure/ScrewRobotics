@@ -100,8 +100,6 @@ class Rotation:
         R[np.abs(R) < tol] = 0.0
         return R
 
-
-
 class Transformation:
     def __init__(self, wx, wy, wz, vx, vy, vz):
         """
@@ -129,6 +127,127 @@ class Transformation:
         self.theta = mag_w if mag_w > tol else mag_v if mag_v > tol else 0
         self.w_hat = w / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
         self.v_hat = v / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
+        self.rotation = Rotation(wx, wy, wz)
+
+    @classmethod
+    def from_numpy(cls, arr):
+        assert arr.shape == (4, 4)
+        return cls(0, 0, 0, 0, 0, 0)
+
+    def __mul__(self, b):
+        if isinstance(b, (int, float, complex)) and not isinstance(b, bool):
+            new = deepcopy(self)
+            new.theta *= b
+            return new
+    
+    __rmul__ = __mul__
+
+    @classmethod
+    def identity(cls):
+        """ Returns the identity of this group """
+        return cls(0, 0, 0, 0, 0, 0)
+
+    @property
+    @lru_cache(maxsize=1)
+    def se3_norm(self):
+        return np.vstack((np.hstack((self.rotation.so3_norm, self.v_hat)), np.array([[0, 0, 0, 0]])))
+    
+
+    '''
+    Returns the transformation in so3 (Lie Algebra)
+    '''
+    @property
+    @lru_cache(maxsize=1)
+    def se3(self):
+        return self.theta * self.se3_norm
+
+    @property
+    @lru_cache(maxsize=1)
+    def SE3(self):
+        R = np.eye(3) + sin(self.theta) * self.rotation.so3_norm + \
+            (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)
+        p = (np.eye(3) * self.theta + (1 - cos(self.theta)) * self.rotation.so3_norm + \
+            (self.theta - sin(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)) @ self.v_hat
+        T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
+        T[np.abs(T) < tol] = 0.0
+        return T
+
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def ad(self):
+        """
+        Returns the lie bracket
+        """
+        w = self.w_hat * self.theta
+        v = self.v_hat * self.theta
+        w_bracket = Rotation(w[0, 0], w[1, 0], w[2, 0]).so3
+        v_bracket = Rotation(v[0, 0], v[1, 0], v[2, 0]).so3
+        ad_V = np.vstack((np.hstack((w_bracket, np.zeros((3, 3)))), np.hstack((v_bracket, w_bracket))))
+        return ad_V
+
+    @property
+    @lru_cache(maxsize=1)
+    def Ad(self):
+        """
+        Returns the adjoint map associated with SE3
+        """
+        T = self.SE3
+        R = T[:3, :3]
+        p = np.array([T[:3, 3]]).T
+        p_rot = Rotation(p[0, 0], p[1, 0], p[2, 0])
+        Ad_T = np.vstack((np.hstack((R, np.zeros((3, 3)))), np.hstack((p_rot.so3 @ R, R))))
+        return Ad_T
+
+    @classmethod
+    def from_SE3(cls, T):
+        """
+        Finds SE(3) representation from homogeneous transformation matrix
+        """
+        R = T[:3, :3]
+        p = np.array([T[:3, 3]]).T
+        rotation = Rotation.from_SO3(R)
+        w_hat = rotation.w_hat
+        if np.linalg.norm(w_hat) < tol:
+            return cls(0, 0, 0, p[0, 0], p[1, 0], p[2, 0])
+        else:
+            theta = rotation.theta
+            w = w_hat * theta
+            w_mat = rotation.so3_norm
+            v_hat = (np.eye(3) / theta - w_mat / 2.0 + (1.0 / theta - (1.0 / np.tan(theta / 2.0)) / 2.0) * (w_mat @ w_mat)) @ p
+            v = v_hat * theta
+            tf = cls(w[0, 0], w[1, 0], w[2, 0], v[0, 0], v[1, 0], v[2, 0])
+            return tf
+
+
+class Transformation2D:
+    def __init__(self, w, wz, vx, vy):
+        """
+        Defines a transformation (rotation + translation) from its Screw Vector
+        w = [w vx vy]^T
+
+        The rotation is given by an axis of rotation w_hat and angle of rotation theta
+        The translation has two terms dueto the linear motion at the origin induced by
+        rotation about the axis, and the other due to the translation along the screw axis
+        
+        The screw vector is decomposed as V = S_hat * theta,
+        where theta is the angle of rotation for revolute joints
+        or the distance of translation for prismatic joints
+
+        If w == 0 and v != 0, this corresponds to a translation.
+        If w != 0 and v == -[w] q, this corresponds to a rotation about the axis centred at q
+        If w != 0 and v == 0, this corresponds to a rotation about the origin
+        if w == 0 and v == 0, this correponds to the identity element of the group (no transformation)
+        if w != 0 and v != 0, this correponds to an arbitrary screw transformation
+        """
+        w = np.array([[wx, wy, wz]]).T
+        v = np.array([[vx, vy, vz]]).T
+        mag_w = np.linalg.norm(w)
+        mag_v = np.linalg.norm(v)
+        self.theta = mag_w if mag_w > tol else mag_v if mag_v > tol else 0
+        self.w_hat = w / self.theta if self.theta > tol else 0
+        self.v_hat = v / self.theta if self.theta > tol else np.array([[0, 0]]).T
         self.rotation = Rotation(wx, wy, wz)
 
     @classmethod

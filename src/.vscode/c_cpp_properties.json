@@ -1,0 +1,23 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/valencimm/catkin_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/valencimm/catkin_ws/src/bob_ros/bob_description/include/**",
+        "/home/valencimm/catkin_ws/src/bob_ros/bob_ik/include/**",
+        "/home/valencimm/catkin_ws/src/color_detect/include/**",
+        "/home/valencimm/catkin_ws/src/metr4202_ros/metr4202_demo/include/**",
+        "/home/valencimm/catkin_ws/src/metr4202_ros/metr4202_description/include/**",
+        "/home/valencimm/catkin_ws/src/ximea_ros_cam/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}
