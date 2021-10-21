@@ -157,10 +157,14 @@ class Transformation:
     @property
     @lru_cache(maxsize=1)
     def SE3(self):
-        R = np.eye(3) + sin(self.theta) * self.rotation.so3_norm + \
-            (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)
-        G = (np.eye(3) * self.theta + (1 - cos(self.theta)) * self.rotation.so3_norm + \
-            (self.theta - sin(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm))
+        if np.linalg.norm(self.rotation.w_hat) < tol:
+            R = np.eye(3)
+            G = np.eye(3) * self.theta
+        else:
+            R = np.eye(3) + sin(self.theta) * self.rotation.so3_norm + \
+                (1 - cos(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm)
+            G = (np.eye(3) * self.theta + (1 - cos(self.theta)) * self.rotation.so3_norm + \
+                (self.theta - sin(self.theta)) * (self.rotation.so3_norm @ self.rotation.so3_norm))
         p = G @ self.v_hat
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 0, 1]])))
         T[np.abs(T) < tol] = 0.0

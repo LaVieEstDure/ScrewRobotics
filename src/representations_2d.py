@@ -14,8 +14,7 @@ tol = 1e-10
 class Rotation2D:
     def __init__(self, w):
         """
-        Defines a rotation from its Euler Vector
-        w = [wx wy wz]^T
+        Defines a rotation from its axis
 
         The rotation is given by an axis of rotation w_hat and angle of rotation theta
         
@@ -41,7 +40,7 @@ class Rotation2D:
         Returns the lie bracket (skew matrix)
         """
         w = self.w_hat * self.theta
-        Ad_w = Rotation2D(w[0, 0], w[1, 0], w[2, 0]).so2
+        Ad_w = Rotation2D(w).so2
         return Ad_w
 
     @property
@@ -137,10 +136,11 @@ class Transformation2D:
     @property
     @lru_cache(maxsize=1)
     def SE2(self):
-        R = cos(self.theta) * np.eye(2) + sin(self.theta) * self.rotation.so2_norm
         if abs(self.rotation.w_hat) < tol:
+            R = np.eye(2)
             G = self.theta * np.eye(2)
         else:
+            R = cos(self.theta) * np.eye(2) + sin(self.theta) * self.rotation.so2_norm
             G = np.eye(2) * sin(self.theta) + (1 - cos(self.theta)) * self.rotation.so2_norm
         p = G @ self.v_hat
         T = np.vstack((np.hstack((R, p)), np.array([[0, 0, 1]])))
@@ -172,7 +172,7 @@ class Transformation2D:
         R = T[:2, :2]
         p = np.array([T[:2, 2]]).T
         skew = np.array([[0, -1], [1, 0]])
-        Ad_T = np.vstack((np.array([[1, 0, 0]])), np.hstack((-skew @ p, R)))
+        Ad_T = np.vstack((np.array([[1, 0, 0]]), np.hstack((-skew @ p, R))))
         return Ad_T
 
     @classmethod
@@ -197,5 +197,10 @@ class Transformation2D:
             return tf
 
 if __name__ == "__main__":
-    tf = Transformation2D(1, 0, -1) * (pi / 2)
-    print(tf.SE2 @ np.array([[2, 0, 1]]).T)
+    T = np.array([
+        [1, 0, 3],
+        [0, 1, 0],
+        [0, 0, 1]
+    ])
+    tf = Transformation2D.from_SE2(T)
+    print(tf.SE2)
