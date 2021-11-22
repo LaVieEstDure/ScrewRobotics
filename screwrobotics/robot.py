@@ -1,10 +1,11 @@
 from copy import error
 from enum import Enum
 from functools import reduce
-from operator import matmul
-from representations import Transformation
+import operator
 import numpy as np
-from math import *
+from math import pi
+from typing import List, Callable, Optional
+from .representations import Transformation
 
 
 class Frame(Enum):
@@ -13,7 +14,8 @@ class Frame(Enum):
 
 
 class Robot:
-    def __init__(self, M_list, screw_list, frame, ik=None, num_ik_iterations=20):
+    def __init__(self, M_list: List[np.array], screw_list: List[np.array], frame: Frame, 
+                ik: Optional[Callable[[np.array], List[float]]] = None, num_ik_iterations=20):
         assert len(M_list) == len(screw_list) + 2
         self.n = len(screw_list)
         self.M_list = M_list
@@ -23,7 +25,7 @@ class Robot:
         self.ik = ik
         self.num_iterations = num_ik_iterations
 
-    def forward_kinematics_all_joints(self, theta_list):
+    def forward_kinematics_all_joints(self, theta_list: List[float]) -> List[np.array]:
         non_norm = [theta * self.screw_list[i]
                     for (i, theta) in enumerate(theta_list)]
         T = [None] * (self.n + 2)
@@ -31,7 +33,7 @@ class Robot:
         for i in range(1, self.n + 2):
             index = i if i != self.n + 1 else i - 1
             SE3_mats = map(lambda x: x.SE3, non_norm[:index])
-            transformation = reduce(matmul, SE3_mats)
+            transformation = reduce(operator.matmul, SE3_mats)
             if self.frame == Frame.SPACE_FRAME:
                 T[i] = transformation @ self.M_list[i]
             elif self.frame == Frame.BODY_FRAME:
@@ -40,11 +42,11 @@ class Robot:
                 raise ValueError("Wrong frame specified!")
         return T
 
-    def forward_kinematics(self, theta_list):
+    def forward_kinematics(self, theta_list: List[float]) -> np.array:
         return self.forward_kinematics_all_joints(theta_list)[-1]
 
-    def inverse_kinematics(self, pose):
-        tol = e-8
+    def inverse_kinematics(self, pose: np.array) -> List[float]:
+        tol = 1e-8
         if self.ik:
             return self.ik(pose)
         else:
@@ -58,7 +60,6 @@ class Robot:
                 if error_w < tol and error_v < tol:
                     return joint_values
                 break
-            
 
 
 if __name__ == "__main__":

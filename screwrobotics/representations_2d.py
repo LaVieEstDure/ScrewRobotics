@@ -3,6 +3,7 @@ from numpy.core.records import array
 from math import *
 from functools import lru_cache
 from copy import deepcopy
+from typing import Union
 
 import matplotlib.pyplot as plt
 
@@ -29,13 +30,13 @@ class Rotation2D:
         self.w_hat = w / self.theta if self.theta > tol else 0
 
     @classmethod
-    def identity(cls):
+    def identity(cls) -> 'Rotation2D':
         """ Returns the identity of this group """
         return cls(0)
 
     @property
     @lru_cache(maxsize=1)
-    def ad(self):
+    def ad(self) -> np.ndarray:
         """
         Returns the lie bracket (skew matrix)
         """
@@ -45,7 +46,7 @@ class Rotation2D:
 
     @property
     @lru_cache(maxsize=1)
-    def Ad(self):
+    def Ad(self) -> np.ndarray:
         """
         Returns the adjoint map associated with SO2
         """
@@ -53,12 +54,12 @@ class Rotation2D:
         return Ad_R
 
     @classmethod
-    def from_SO2(cls, R):
+    def from_SO2(cls, R) -> 'Rotation2D':
         return cls(atan2(R[1, 0], R[0, 0]))
 
     @property
     @lru_cache(maxsize=1)
-    def so2_norm(self):
+    def so2_norm(self) -> np.ndarray:
         """Returns the transformation in so2 (element of Lie Algebra), when theta = 1"""
         return np.array([
             [0, -self.w_hat], 
@@ -67,13 +68,13 @@ class Rotation2D:
 
     @property
     @lru_cache(maxsize=1)
-    def so2(self):
+    def so2(self) -> np.ndarray:
         """Returns the transformation in so2 (element of Lie Algebra)"""
         return self.theta * self.so2_norm
 
     @property
     @lru_cache(maxsize=1)
-    def SO2(self):
+    def SO2(self) -> np.ndarray:
         """Returns the transformation in SO2 (element of Lie Group)"""
         R = cos(self.theta) * np.eye(2) + sin(self.theta) * self.so2_norm
         R[np.abs(R) < tol] = 0.0
@@ -107,22 +108,24 @@ class Transformation2D:
         self.v_hat = v / self.theta if self.theta > tol else np.array([[0, 0]]).T
         self.rotation = Rotation2D(w)
 
-    def __mul__(self, b):
+    def __mul__(self, b: Union[int, float, complex]) -> 'Transformation2D':
         if isinstance(b, (int, float, complex)) and not isinstance(b, bool):
             new = deepcopy(self)
             new.theta *= b
             return new
+        else: 
+            raise ValueError("Transformation2D can only be multiplied by a scalar")
     
     __rmul__ = __mul__
 
     @classmethod
-    def identity(cls):
+    def identity(cls) -> 'Transformation2D':
         """ Returns the identity of this group """
         return cls(0, 0, 0)
 
     @property
     @lru_cache(maxsize=1)
-    def se2_norm(self):
+    def se2_norm(self) -> np.ndarray:
         return np.vstack((np.hstack((self.rotation.so2_norm, self.v_hat)), np.array([[0, 0, 0]])))
     
     '''
@@ -130,12 +133,12 @@ class Transformation2D:
     '''
     @property
     @lru_cache(maxsize=1)
-    def se2(self):
+    def se2(self) -> np.ndarray:
         return self.theta * self.se2_norm
 
     @property
     @lru_cache(maxsize=1)
-    def SE2(self):
+    def SE2(self) -> np.ndarray:
         if abs(self.rotation.w_hat) < tol:
             R = np.eye(2)
             G = self.theta * np.eye(2)
@@ -151,7 +154,7 @@ class Transformation2D:
 
     @property
     @lru_cache(maxsize=1)
-    def ad(self):
+    def ad(self) -> np.ndarray:
         """
         Returns the lie bracket
         """
@@ -164,7 +167,7 @@ class Transformation2D:
 
     @property
     @lru_cache(maxsize=1)
-    def Ad(self):
+    def Ad(self) -> np.ndarray:
         """
         Returns the adjoint map associated with SE(2)
         """
@@ -176,7 +179,7 @@ class Transformation2D:
         return Ad_T
 
     @classmethod
-    def from_SE2(cls, T):
+    def from_SE2(cls, T) -> 'Transformation2D':
         """
         Finds SE(2) representation from homogeneous transformation matrix
         """

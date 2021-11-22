@@ -1,8 +1,9 @@
 import numpy as np
 from numpy.core.records import array 
-from math import *
+from math import pi, sin, cos, acos, sqrt
 from functools import lru_cache
 from copy import deepcopy
+from typing import Union
 
 import matplotlib.pyplot as plt
 
@@ -29,20 +30,19 @@ class Rotation:
         self.w_hat = w / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
 
     @classmethod
-    def from_numpy(cls, arr):
+    def from_numpy(cls, arr: np.ndarray) -> 'Rotation':
         assert arr.shape == (3, 3)
-        
         return cls(0, 0, 0)
 
 
     @classmethod
-    def identity(cls):
+    def identity(cls) -> 'Rotation':
         """ Returns the identity of this group """
         return cls(0, 0, 0)
 
     @property
     @lru_cache(maxsize=1)
-    def ad(self):
+    def ad(self) -> np.ndarray:
         """
         Returns the lie bracket (skew matrix)
         """
@@ -52,7 +52,7 @@ class Rotation:
 
     @property
     @lru_cache(maxsize=1)
-    def Ad(self):
+    def Ad(self) -> np.ndarray:
         """
         Returns the adjoint map associated with SO3
         """
@@ -60,7 +60,7 @@ class Rotation:
         return Ad_R
 
     @classmethod
-    def from_SO3(cls, R):
+    def from_SO3(cls, R: np.ndarray) -> 'Rotation':
         if abs(np.linalg.norm(R - np.ones(3))) < tol:
             return cls(0, 0, 0)
         if abs(np.trace(R) + 1.0) < tol:
@@ -78,7 +78,7 @@ class Rotation:
 
     @property
     @lru_cache(maxsize=1)
-    def so3_norm(self):
+    def so3_norm(self) -> np.ndarray:
         """Returns the transformation in so3 (element of Lie Algebra), when theta = 1"""
         return np.array([[             0, -self.w_hat[2,0],  self.w_hat[1,0]], 
                          [ self.w_hat[2,0],              0, -self.w_hat[0,0]], 
@@ -86,13 +86,13 @@ class Rotation:
 
     @property
     @lru_cache(maxsize=1)
-    def so3(self):
+    def so3(self) -> np.ndarray:
         """Returns the transformation in so3 (element of Lie Algebra)"""
         return self.theta * self.so3_norm
 
     @property
     @lru_cache(maxsize=1)
-    def SO3(self):
+    def SO3(self) -> np.ndarray:
         """Returns the transformation in SO3 (element of Lie Group)"""
         R = np.eye(3) + sin(self.theta) * self.so3_norm + (1 - cos(self.theta)) * (self.so3_norm @ self.so3_norm)
         R[np.abs(R) < tol] = 0.0
@@ -127,7 +127,7 @@ class Transformation:
         self.v_hat = v / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
         self.rotation = Rotation(wx, wy, wz)
 
-    def __mul__(self, b):
+    def __mul__(self, b: Union[int, float, complex]) -> 'Transformation':
         if isinstance(b, (int, float, complex)) and not isinstance(b, bool):
             new = deepcopy(self)
             new.theta *= b
@@ -136,13 +136,13 @@ class Transformation:
     __rmul__ = __mul__
 
     @classmethod
-    def identity(cls):
+    def identity(cls) -> 'Transformation':
         """ Returns the identity of this group """
         return cls(0, 0, 0, 0, 0, 0)
 
     @property
     @lru_cache(maxsize=1)
-    def se3_norm(self):
+    def se3_norm(self) -> np.ndarray:
         return np.vstack((np.hstack((self.rotation.so3_norm, self.v_hat)), np.array([[0, 0, 0, 0]])))
     
 
@@ -151,12 +151,12 @@ class Transformation:
     '''
     @property
     @lru_cache(maxsize=1)
-    def se3(self):
+    def se3(self) -> np.ndarray:
         return self.theta * self.se3_norm
 
     @property
     @lru_cache(maxsize=1)
-    def SE3(self):
+    def SE3(self) -> np.ndarray:
         if np.linalg.norm(self.rotation.w_hat) < tol:
             R = np.eye(3)
             G = np.eye(3) * self.theta
@@ -173,7 +173,7 @@ class Transformation:
 
     @property
     @lru_cache(maxsize=1)
-    def ad(self):
+    def ad(self) -> np.ndarray:
         """
         Returns the lie bracket
         """
@@ -186,7 +186,7 @@ class Transformation:
 
     @property
     @lru_cache(maxsize=1)
-    def Ad(self):
+    def Ad(self) -> np.ndarray:
         """
         Returns the adjoint map associated with SE3
         """
@@ -198,7 +198,7 @@ class Transformation:
         return Ad_T
 
     @classmethod
-    def from_SE3(cls, T):
+    def from_SE3(cls, T: np.ndarray) -> 'Transformation':
         """
         Finds SE(3) representation from homogeneous transformation matrix
         """
@@ -219,8 +219,7 @@ class Transformation:
             return tf
 
 
-
-def axisEqual3D(ax):
+def axisEqual3D(ax: plt.Axes):
     extents = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
     sz = extents[:,1] - extents[:,0]
     centers = np.mean(extents, axis=1)
