@@ -176,7 +176,7 @@ class Transformation:
     def ad(self) -> np.ndarray:
         """
         Returns the lie bracket
-        """
+        """f
         w = self.w_hat * self.theta
         v = self.v_hat * self.theta
         w_bracket = Rotation(w[0, 0], w[1, 0], w[2, 0]).so3
