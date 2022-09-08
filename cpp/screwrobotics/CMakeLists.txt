@@ -2,6 +2,8 @@ project(screwrobotics)
 cmake_minimum_required(VERSION 3.10)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
+add_definitions(-DTOL=1e-5)
+
 include_directories(
     include
     ${EIGEN3_INCLUDE_DIR}

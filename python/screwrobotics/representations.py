@@ -176,7 +176,7 @@ class Transformation:
     def ad(self) -> np.ndarray:
         """
         Returns the lie bracket
-        """f
+        """
         w = self.w_hat * self.theta
         v = self.v_hat * self.theta
         w_bracket = Rotation(w[0, 0], w[1, 0], w[2, 0]).so3
@@ -270,7 +270,11 @@ def screw_demo():
 
 if __name__ == "__main__":
 
-    V = Transformation(0, 0, 1, 0, -1, 0)
-    V_mr = np.array([0, 0, 1, 0, -1, 0])
-    print(V.ad)
-    print(mr.ad(V_mr))
+    T = np.array([
+        [1 / sqrt(2), 1 / sqrt(2), 0, 1],
+        [-1 / sqrt(2), 1 / sqrt(2), 0, 2],
+        [0, 0, 1, -0.5],
+        [0, 0, 0, 1]
+    ])
+    tf = Transformation.from_SE3(T)
+    T_test = tf.SE3

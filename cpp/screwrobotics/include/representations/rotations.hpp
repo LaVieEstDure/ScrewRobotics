@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <Eigen/Dense>
-#define TOL 1e-6
 
 template <class Type>
 class Rotation{
@@ -16,7 +15,7 @@ public:
     Rotation<Type> from_array(Type* array);
     Eigen::Matrix<Type, 3, 3> ad(Type* array);
     Eigen::Matrix<Type, 3, 3> Ad(Type* array);
-    Rotation<Type> operator=(Rotation<Type> const& other);
+    void operator=(Rotation<Type> const& other);
     Eigen::Matrix<Type, 3, 3> so3_norm();
     Eigen::Matrix<Type, 3, 3> so3();
     Eigen::Matrix<Type, 3, 3> SO3();
@@ -70,11 +69,9 @@ Rotation<Type>::Rotation() {
 }
 
 template <class Type>
-Rotation<Type> Rotation<Type>::operator=(Rotation<Type> const& other) {
-    float wx = other.theta * other.w_hat(0, 0);
-    float wy = other.theta * other.w_hat(1, 0);
-    float wz = other.theta * other.w_hat(2, 0);
-    return Rotation<Type>(wx, wy, wz);
+void Rotation<Type>::operator=(Rotation<Type> const& other) {
+    theta = other.theta;
+    w_hat = other.w_hat;
 }
 
 template <class Type>
