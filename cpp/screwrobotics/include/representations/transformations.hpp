@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <Eigen/Dense>
-#include <representations/transformations.hpp>
 
 template <class Type>
 class Transformation{
