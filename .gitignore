@@ -1,4 +1,5 @@
 cpp/screwrobotics/build/*
 python/.vscode
 .vscode
+*.vscode
 ScrewRobotics.egg-info/*
