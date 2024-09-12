@@ -6,7 +6,6 @@ from copy import deepcopy
 from typing import Union
 
 import matplotlib.pyplot as plt
-
 import modern_robotics as mr
 
 # Tolerance
@@ -198,12 +197,3 @@ class Transformation2D:
             v = v_hat * theta
             tf = cls(w, v[0, 0], v[1, 0])
             return tf
-
-if __name__ == "__main__":
-    T = np.array([
-        [1, 0, 3],
-        [0, 1, 0],
-        [0, 0, 1]
-    ])
-    tf = Transformation2D.from_SE2(T)
-    print(tf.SE2)

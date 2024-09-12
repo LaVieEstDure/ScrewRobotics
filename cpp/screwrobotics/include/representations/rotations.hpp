@@ -3,33 +3,34 @@
 
 #include <iostream>
 #include <Eigen/Dense>
+#include <representations/aliases.hpp>
 
 template <class Type>
 class Rotation{
 public:
     Rotation(Type wx, Type wy, Type wz);
     Type theta;
-    Eigen::Matrix<Type, 3, 1> w_hat;
+    Vec3<Type> w_hat;
     Rotation<Type> identity();
     Rotation<Type>();
     Rotation<Type> from_array(Type* array);
-    Eigen::Matrix<Type, 3, 3> ad(Type* array);
-    Eigen::Matrix<Type, 3, 3> Ad(Type* array);
+    Mat3x3<Type> ad(Type* array);
+    Mat3x3<Type> Ad(Type* array);
     void operator=(Rotation<Type> const& other);
-    Eigen::Matrix<Type, 3, 3> so3_norm();
-    Eigen::Matrix<Type, 3, 3> so3();
-    Eigen::Matrix<Type, 3, 3> SO3();
+    Mat3x3<Type> so3_norm();
+    Mat3x3<Type> so3();
+    Mat3x3<Type> SO3();
     
 };
 
-namespace rot {
+namespace repr {
 
 template <class Type>
-Rotation<Type> from_SO3(const Eigen::Matrix<Type, 3, 3> &R);
+Rotation<Type> from_SO3(const Mat3x3<Type> &R);
 
 template <class Type>
-Rotation<Type> from_SO3(const Eigen::Matrix<Type, 3, 3> &R) {
-    if (std::abs((R - Eigen::Matrix<Type, 3, 3>::Identity()).norm()) < TOL) {
+Rotation<Type> from_SO3(const Mat3x3<Type> &R) {
+    if (std::abs((R - Mat3x3<Type>::Identity()).norm()) < TOL) {
         return Rotation<Type>(0, 0, 0);
     }
     if (std::abs(R.trace()) + 1.0 < TOL) {
@@ -39,7 +40,7 @@ Rotation<Type> from_SO3(const Eigen::Matrix<Type, 3, 3> &R) {
         return Rotation<Type>(wx, wy, wz);
     }
     Type theta = std::acos((R.trace() - 1.0) / 2.0);
-    Eigen::Matrix<Type, 3, 3> w_hat_so3 = (R - R.transpose()) / (2 * std::sin(theta));
+    Mat3x3<Type> w_hat_so3 = (R - R.transpose()) / (2 * std::sin(theta));
     Type wx = theta * w_hat_so3(2, 1);
     Type wy = theta * w_hat_so3(0, 2);
     Type wz = theta * w_hat_so3(1, 0);
@@ -75,8 +76,8 @@ void Rotation<Type>::operator=(Rotation<Type> const& other) {
 }
 
 template <class Type>
-Eigen::Matrix<Type, 3, 3> Rotation<Type>::so3_norm() {
-    Eigen::Matrix<Type, 3, 3> w_hat_skew;
+Mat3x3<Type> Rotation<Type>::so3_norm() {
+    Mat3x3<Type> w_hat_skew;
     w_hat_skew <<           0, -w_hat(2, 0),  w_hat(1, 0),
                   w_hat(2, 0),            0, -w_hat(0, 0),
                   w_hat(1, 0),  w_hat(0, 0),            0;
@@ -84,14 +85,14 @@ Eigen::Matrix<Type, 3, 3> Rotation<Type>::so3_norm() {
 }
 
 template <class Type>
-Eigen::Matrix<Type, 3, 3> Rotation<Type>::so3() {
+Mat3x3<Type> Rotation<Type>::so3() {
     return so3_norm() * theta;
 }
 
 template <class Type>
-Eigen::Matrix<Type, 3, 3> Rotation<Type>::SO3() {
-    Eigen::Matrix<Type, 3, 3> w_hat_skew = so3_norm();
-    Eigen::Matrix<Type, 3, 3> R = Eigen::Matrix<Type, 3, 3>::Identity() + std::sin(theta) * w_hat_skew + (1 - std::cos(theta)) * (w_hat_skew * w_hat_skew);
+Mat3x3<Type> Rotation<Type>::SO3() {
+    Mat3x3<Type> w_hat_skew = so3_norm();
+    Mat3x3<Type> R = Mat3x3<Type>::Identity() + std::sin(theta) * w_hat_skew + (1 - std::cos(theta)) * (w_hat_skew * w_hat_skew);
     return R;
 }
 

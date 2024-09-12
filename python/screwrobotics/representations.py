@@ -34,7 +34,6 @@ class Rotation:
         assert arr.shape == (3, 3)
         return cls(0, 0, 0)
 
-
     @classmethod
     def identity(cls) -> 'Rotation':
         """ Returns the identity of this group """
@@ -61,20 +60,31 @@ class Rotation:
 
     @classmethod
     def from_SO3(cls, R: np.ndarray) -> 'Rotation':
-        if abs(np.linalg.norm(R - np.ones(3))) < tol:
+        acosinput = (np.trace(R) - 1.0) / 2.0
+        # If R = I then theta = 0 and w -> undefined
+        if abs(np.linalg.norm(R - np.eye(3))) < tol:
             return cls(0, 0, 0)
+        # If tr(R) = -1 then theta = pi
         if abs(np.trace(R) + 1.0) < tol:
-            wx = (pi / sqrt(2 * (1 + R[2][2]))) * R[0,2]
-            wy = (pi / sqrt(2 * (1 + R[2][2]))) * R[1,2]
-            wz = (pi / sqrt(2 * (1 + R[2][2]))) * (1.0 + R[2,2])
+            theta = np.pi
+            if abs(1 + R[2, 2]) > tol:
+                wx = (theta / sqrt(2 * (1 + R[2, 2]))) * R[0, 2]
+                wy = (theta / sqrt(2 * (1 + R[2, 2]))) * R[1, 2]
+                wz = (theta / sqrt(2 * (1 + R[2, 2]))) * (1.0 + R[2, 2])
+            elif abs(1 + R[1, 1]) > tol:
+                wx = (theta / sqrt(2 * (1 + R[1, 1]))) * R[0, 1]
+                wy = (theta / sqrt(2 * (1 + R[1, 1]))) * (1.0 + R[1, 1])
+                wz = (theta / sqrt(2 * (1 + R[1, 1]))) * R[2, 1]
+            elif abs(1 + R[0, 0]) > tol:
+                wx = (theta / sqrt(2 * (1 + R[0, 0]))) * (1.0 + R[0, 0])
+                wy = (theta / sqrt(2 * (1 + R[0, 0]))) * R[1, 0]
+                wz = (theta / sqrt(2 * (1 + R[0, 0]))) * R[2, 0]
             return cls(wx, wy, wz)
-        if False:
-            cls(0,0,0)
         else:
             theta = acos((np.trace(R) - 1.0) / 2.0)
             w_hat_so3 = (R - R.T) / (2 * sin(theta))
             w_hat = np.array([w_hat_so3[2,1], w_hat_so3[0, 2], w_hat_so3[1, 0]])
-            return cls(*(w_hat*theta))
+            return cls(*(w_hat * theta))
 
     @property
     @lru_cache(maxsize=1)
@@ -97,6 +107,32 @@ class Rotation:
         R = np.eye(3) + sin(self.theta) * self.so3_norm + (1 - cos(self.theta)) * (self.so3_norm @ self.so3_norm)
         R[np.abs(R) < tol] = 0.0
         return R
+    
+    
+    def __mul__(left: Union['Rotation', int, float, complex], right: 'Rotation'):
+        if isinstance(left, Rotation) and isinstance(right, Rotation):
+            rot_1 = left
+            rot_2 = right
+            return Rotation.from_SO3(rot_1.SO3 @ rot_2.SO3)
+        if isinstance(left, (int, float, complex)):
+            theta = left
+            rot = right
+            new = deepcopy(rot)
+            new.theta *= theta
+            return new
+        
+        if isinstance(right, (int, float, complex)):
+            theta = right
+            rot = left
+            new = deepcopy(rot)
+            new.theta *= theta
+            return new
+
+    def __str__(self) -> str:
+        return str(self.SO3)
+        
+    __rmul__ = __mul__
+    __lmul__ = __mul__
 
 class Transformation:
     def __init__(self, wx, wy, wz, vx, vy, vz):
@@ -127,13 +163,6 @@ class Transformation:
         self.v_hat = v / self.theta if self.theta > tol else np.array([[0, 0, 0]]).T
         self.rotation = Rotation(wx, wy, wz)
 
-    def __mul__(self, b: Union[int, float, complex]) -> 'Transformation':
-        if isinstance(b, (int, float, complex)) and not isinstance(b, bool):
-            new = deepcopy(self)
-            new.theta *= b
-            return new
-    
-    __rmul__ = __mul__
 
     @classmethod
     def identity(cls) -> 'Transformation':
@@ -146,6 +175,16 @@ class Transformation:
         return np.vstack((np.hstack((self.rotation.so3_norm, self.v_hat)), np.array([[0, 0, 0, 0]])))
     
 
+
+    '''
+    Returns the transformation in R6 (Lie Algebra Vector)
+    '''
+    @property
+    @lru_cache(maxsize=1)
+    def V_hat(self) -> np.ndarray:
+        return np.vstack([self.theta * self.w_hat, self.theta * self.v_hat])
+
+
     '''
     Returns the transformation in so3 (Lie Algebra)
     '''
@@ -153,6 +192,8 @@ class Transformation:
     @lru_cache(maxsize=1)
     def se3(self) -> np.ndarray:
         return self.theta * self.se3_norm
+
+
 
     @property
     @lru_cache(maxsize=1)
@@ -219,14 +260,26 @@ class Transformation:
             return tf
 
 
+    def __mul__(self, b: Union[int, float, complex]) -> 'Transformation':
+        if isinstance(b, (int, float, complex)) and not isinstance(b, bool):
+            new = deepcopy(self)
+            new.theta *= b
+            return new
+    
+    __rmul__ = __mul__
+
 def axisEqual3D(ax: plt.Axes):
     extents = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
     sz = extents[:,1] - extents[:,0]
     centers = np.mean(extents, axis=1)
     maxsize = max(abs(sz))
-    r = maxsize/2
+    r = maxsize / 2
     for ctr, dim in zip(centers, 'xyz'):
         getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
+
+def test():
+    S_skew = Transformation(np.pi, 0, 0, 0, 1, 0).se3
+    print(S_skew)
 
 def screw_demo():
     ax = plt.axes(projection='3d')
@@ -269,12 +322,5 @@ def screw_demo():
     
 
 if __name__ == "__main__":
-
-    T = np.array([
-        [1 / sqrt(2), 1 / sqrt(2), 0, 1],
-        [-1 / sqrt(2), 1 / sqrt(2), 0, 2],
-        [0, 0, 1, -0.5],
-        [0, 0, 0, 1]
-    ])
-    tf = Transformation.from_SE3(T)
-    T_test = tf.SE3
+    rot_1 = np.pi * Rotation(0, 0, 1)
+    rot_2 = (np.pi / 2) * Rotation(1, 0, 0)
